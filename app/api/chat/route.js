@@ -68,8 +68,23 @@ export async function POST(request) {
       } catch (error) {
         console.error("API route error:", error);
         retries++;
+        
+        if (retries <= maxRetries) {
+          console.log(`Retrying after error... (attempt ${retries+1}/${maxRetries+1})`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          continue;
+        }
       }
     }
+    
+    // 确保在所有重试失败后返回一个响应
+    return new Response(JSON.stringify({ 
+      error: lastError || "Failed to get response after multiple attempts" 
+    }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
+    
   } catch (error) {
     console.error("API route error:", error);
     return new Response(JSON.stringify({ error: error.message }), {
