@@ -16,19 +16,19 @@ export async function POST(request) {
       });
     }
     
-    // 测试响应 - 跳过实际API调用
-    return new Response(JSON.stringify({
-      choices: [
-        {
-          message: {
-            content: "This is a test response to verify the API route is working. If you see this, your frontend is correctly communicating with the backend."
-          }
-        }
-      ]
-    }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" }
-    });
+    // 移除测试响应，启用真实API调用
+    // return new Response(JSON.stringify({
+    //   choices: [
+    //     {
+    //       message: {
+    //         content: "This is a test response to verify the API route is working. If you see this, your frontend is correctly communicating with the backend."
+    //       }
+    //     }
+    //   ]
+    // }), {
+    //   status: 200,
+    //   headers: { "Content-Type": "application/json" }
+    // });
     
     console.log("Sending request to OpenRouter with payload:", {
       model: "openai/gpt-3.5-turbo",
