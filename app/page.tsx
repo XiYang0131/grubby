@@ -50,8 +50,8 @@ const testimonials = [
 
 const features = [
   {
-    title: "高级AI理解能力",
-    description: "由Optimus Alpha提供支持，我们的AI能够理解上下文、细微差别和复杂指令，具有卓越的准确性。可以处理从简单查询到复杂技术讨论的各种任务。",
+    title: "Advanced AI Understanding",
+    description: "Powered by Optimus Alpha, our AI understands context, nuance, and complex instructions with remarkable accuracy. Handle everything from simple queries to intricate technical discussions.",
     icon: Brain
   },
   {
@@ -116,12 +116,12 @@ const useCases = [
 
 const faqs = [
   {
-    question: "什么使您的AI助手与众不同？",
-    answer: "我们的AI助手由Optimus Alpha提供支持，这是目前最先进的语言模型之一。它擅长理解上下文、处理复杂任务并提供详细、准确的回应。与其他解决方案不同，我们提供企业级安全性、自定义训练功能以及与您现有工具的深度集成选项。"
+    question: "What makes your AI assistant different from others?",
+    answer: "Our AI assistant is powered by Optimus Alpha, one of the most advanced language models available. It excels in understanding context, handling complex tasks, and providing detailed, accurate responses. Unlike other solutions, we offer enterprise-grade security, custom training capabilities, and deep integration options with your existing tools."
   },
   {
-    question: "您如何确保数据安全和隐私？",
-    answer: "我们实施多层安全措施：端到端加密、SOC 2 Type II合规性、自定义数据保留策略和定期安全审计。您的数据在隔离环境中处理，我们还提供特定区域的数据驻留选项。未经明确同意，我们绝不会使用客户数据进行模型训练。"
+    question: "How do you ensure data security and privacy?",
+    answer: "We implement multiple layers of security: end-to-end encryption, SOC 2 Type II compliance, custom data retention policies, and regular security audits. Your data is processed in isolated environments, and we offer options for data residency in specific regions. We never use customer data for model training without explicit consent."
   },
   {
     question: "Can I customize the AI for my specific needs?",
@@ -187,7 +187,7 @@ export default function Home() {
         }),
       });
 
-      if (!response.ok) throw new Error('API请求失败');
+      if (!response.ok) throw new Error('API request failed');
 
       const data = await response.json();
       const assistantMessage: Message = {
@@ -366,8 +366,8 @@ export default function Home() {
               <span className="bg-gradient-to-r from-blue-600 to-purple-600 text-transparent bg-clip-text"> Advanced AI</span>
             </h1>
             <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              体验由Optimus Alpha提供支持的下一代AI助手。从代码开发到内容创作，
-              我们的AI理解上下文，从反馈中学习，并实时提供准确的结果。
+              Experience the next generation of AI assistance powered by Optimus Alpha. From code development to content creation, 
+              our AI understands context, learns from feedback, and delivers accurate results in real-time.
             </p>
             <div className="flex gap-4 justify-center">
               <Button size="lg" onClick={() => setShowChat(true)}>
