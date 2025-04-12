@@ -37,6 +37,12 @@ export function FAQ() {
               We implement multiple layers of security: end-to-end encryption, SOC 2 Type II compliance, custom data retention policies, and regular security audits. Your data is processed in isolated environments, and we offer options for data residency in specific regions. We never use customer data for model training without explicit consent.
             </AccordionContent>
           </AccordionItem>
+          <AccordionItem value="what-is-grubby">
+            <AccordionTrigger>What is Grubby AI?</AccordionTrigger>
+            <AccordionContent>
+              Grubby AI is an advanced artificial intelligence assistant powered by the Optimus Alpha language model. It's designed to understand complex instructions, learn from interactions, and provide accurate, contextually relevant responses across a wide range of tasks from content creation to code development.
+            </AccordionContent>
+          </AccordionItem>
         </Accordion>
       </div>
     </section>
