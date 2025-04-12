@@ -228,6 +228,23 @@ export default function Home() {
     toast.success("Copied to clipboard");
   };
 
+  const testApi = async () => {
+    try {
+      const response = await fetch("/api/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ test: true })
+      });
+      
+      const data = await response.json();
+      console.log("Test API response:", data);
+      alert("API测试结果: " + JSON.stringify(data));
+    } catch (error) {
+      console.error("Test API error:", error);
+      alert("API测试错误: " + error.message);
+    }
+  };
+
   if (showChat) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
