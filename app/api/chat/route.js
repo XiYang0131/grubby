@@ -1,10 +1,12 @@
 export async function POST(request) {
-  const { messages, userMessage } = await request.json();
+  console.log("API route called");
   
   try {
-    console.log("API route called with:", { messages, userMessage });
+    const { messages, userMessage } = await request.json();
+    console.log("Request payload:", { messageCount: messages?.length, userMessage });
     
     const apiKey = process.env.OPENROUTER_API_KEY || process.env.NEXT_PUBLIC_OPENROUTER_API_KEY;
+    console.log("API key exists:", !!apiKey, "First 4 chars:", apiKey?.substring(0, 4));
     
     if (!apiKey) {
       console.error("API key is missing");
@@ -13,6 +15,20 @@ export async function POST(request) {
         headers: { "Content-Type": "application/json" }
       });
     }
+    
+    // 测试响应 - 跳过实际API调用
+    return new Response(JSON.stringify({
+      choices: [
+        {
+          message: {
+            content: "This is a test response to verify the API route is working. If you see this, your frontend is correctly communicating with the backend."
+          }
+        }
+      ]
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
     
     console.log("Sending request to OpenRouter with payload:", {
       model: "openai/gpt-3.5-turbo",
@@ -87,7 +103,7 @@ export async function POST(request) {
     
   } catch (error) {
     console.error("API route error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: error.message || "Unknown error occurred" }), {
       status: 500,
       headers: { "Content-Type": "application/json" }
     });
