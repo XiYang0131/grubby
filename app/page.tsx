@@ -187,12 +187,19 @@ export default function Home() {
         }),
       });
 
-      if (!response.ok) throw new Error('API request failed');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'API request failed');
+      }
 
       const data = await response.json();
+      console.log("Response from API:", data);
+      
       const assistantMessage: Message = {
         role: "assistant",
-        content: data.choices[0].message.content,
+        content: data.choices && data.choices[0] && data.choices[0].message 
+          ? data.choices[0].message.content 
+          : "Sorry, I couldn't generate a response.",
         timestamp: Date.now(),
       };
 
@@ -201,13 +208,13 @@ export default function Home() {
       if (currentConversation) {
         setConversations(conversations.map(conv => 
           conv.id === currentConversation 
-            ? { ...conv, messages: [...messages, userMessage, assistantMessage] }
+            ? { ...conv, messages: [...conv.messages, userMessage, assistantMessage] }
             : conv
         ));
       }
     } catch (error) {
-      toast.error("Failed to get response from AI");
-      console.error("Error:", error);
+      console.error("Error in handleSubmit:", error);
+      toast.error(error.message || "Failed to get response from AI");
     } finally {
       setIsLoading(false);
     }
