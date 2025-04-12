@@ -214,7 +214,10 @@ export default function Home() {
       }
     } catch (error) {
       console.error("Error in handleSubmit:", error);
-      toast.error(error.message || "Failed to get response from AI");
+      const errorMessage = error && typeof error === 'object' && 'message' in error 
+        ? error.message as string 
+        : "Failed to get response from AI";
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
