@@ -120,8 +120,8 @@ const faqs = [
     answer: "我们的AI助手由Optimus Alpha提供支持，这是目前最先进的语言模型之一。它擅长理解上下文、处理复杂任务并提供详细、准确的回应。与其他解决方案不同，我们提供企业级安全性、自定义训练功能以及与您现有工具的深度集成选项。"
   },
   {
-    question: "How do you ensure data security and privacy?",
-    answer: "We implement multiple layers of security: end-to-end encryption, SOC 2 Type II compliance, custom data retention policies, and regular security audits. Your data is processed in isolated environments, and we offer options for data residency in specific regions. We never use customer data for model training without explicit consent."
+    question: "您如何确保数据安全和隐私？",
+    answer: "我们实施多层安全措施：端到端加密、SOC 2 Type II合规性、自定义数据保留策略和定期安全审计。您的数据在隔离环境中处理，我们还提供特定区域的数据驻留选项。未经明确同意，我们绝不会使用客户数据进行模型训练。"
   },
   {
     question: "Can I customize the AI for my specific needs?",
@@ -176,20 +176,18 @@ export default function Home() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.NEXT_PUBLIC_OPENROUTER_API_KEY}`,
-          "HTTP-Referer": window.location.origin,
         },
         body: JSON.stringify({
-          model: "openrouter/optimus-alpha",
-          messages: [...messages, userMessage].map(({ role, content }) => ({ role, content })),
+          messages: messages,
+          userMessage: { role: "user", content: input },
         }),
       });
 
-      if (!response.ok) throw new Error('API request failed');
+      if (!response.ok) throw new Error('API请求失败');
 
       const data = await response.json();
       const assistantMessage: Message = {
