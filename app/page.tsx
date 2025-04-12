@@ -241,7 +241,10 @@ export default function Home() {
       alert("API测试结果: " + JSON.stringify(data));
     } catch (error) {
       console.error("Test API error:", error);
-      alert("API测试错误: " + error.message);
+      const errorMessage = error && typeof error === 'object' && 'message' in error 
+        ? error.message as string 
+        : "未知错误";
+      alert("API测试错误: " + errorMessage);
     }
   };
 
