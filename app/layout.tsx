@@ -6,7 +6,7 @@ import Script from 'next/script';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Grubby AI | Advanced AI Assistant Powered by Optimus Alpha',
+  title: 'Grubby AI | Advanced AI Assistant Powered by HumanizeAI',
   description: 'Grubby AI is an intelligent assistant that understands context, learns from feedback, and delivers accurate results in real-time.',
 };
 

@@ -51,7 +51,7 @@ const testimonials = [
 const features = [
   {
     title: "Advanced AI Understanding",
-    description: "Powered by Optimus Alpha, our AI understands context, nuance, and complex instructions with remarkable accuracy. Handle everything from simple queries to intricate technical discussions.",
+    description: "Powered by HumanizeAI, our AI understands context, nuance, and complex instructions with remarkable accuracy. Handle everything from simple queries to intricate technical discussions.",
     icon: Brain
   },
   {

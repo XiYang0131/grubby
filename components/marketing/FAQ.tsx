@@ -20,9 +20,9 @@ export function FAQ() {
         </div>
         <Accordion type="single" collapsible className="space-y-4">
           <AccordionItem value="model">
-            <AccordionTrigger>About Optimus Alpha Model</AccordionTrigger>
+            <AccordionTrigger>About Our AI Model</AccordionTrigger>
             <AccordionContent>
-              Optimus Alpha is a powerful large language model provided by OpenRouter, with excellent natural language understanding and generation capabilities. It excels in code generation, text analysis, creative writing, and problem-solving, providing users with accurate, relevant, and insightful responses.
+              Grubby AI is powered by HumanizeAI's advanced language model, with excellent natural language understanding and generation capabilities. It excels in code generation, text analysis, creative writing, and problem-solving, providing users with accurate, relevant, and insightful responses.
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="difference">
