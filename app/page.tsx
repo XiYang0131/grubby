@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useReducer, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import MessageList from "@/components/MessageList";
 
 interface Message {
   role: "user" | "assistant";
@@ -142,39 +143,106 @@ const faqs = [
   }
 ];
 
+// 定义状态类型
+type State = {
+  messages: Message[];
+  conversations: Conversation[];
+  currentConversation: string | null;
+  isLoading: boolean;
+};
+
+// 定义action类型
+type Action = 
+  | { type: 'ADD_USER_MESSAGE', payload: { content: string } }
+  | { type: 'ADD_ASSISTANT_MESSAGE', payload: { content: string } }
+  | { type: 'SET_LOADING', payload: boolean }
+  | { type: 'CREATE_NEW_CONVERSATION' }
+  | { type: 'SELECT_CONVERSATION', payload: string }
+  | { type: 'SET_MESSAGES', payload: Message[] };
+
+// 初始状态
+const initialState: State = {
+  messages: [],
+  conversations: [],
+  currentConversation: null,
+  isLoading: false
+};
+
+// Reducer函数
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case 'ADD_USER_MESSAGE': {
+      const userMessage: Message = {
+        role: 'user',
+        content: action.payload.content,
+        timestamp: Date.now()
+      };
+      
+      const newMessages = [...state.messages, userMessage];
+      
+      let newConversations = state.conversations;
+      if (state.currentConversation) {
+        newConversations = state.conversations.map(conv => 
+          conv.id === state.currentConversation
+            ? { ...conv, messages: [...conv.messages, userMessage] }
+            : conv
+        );
+      }
+      
+      return {
+        ...state,
+        messages: newMessages,
+        conversations: newConversations,
+        isLoading: true
+      };
+    }
+    
+    case 'ADD_ASSISTANT_MESSAGE': {
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: action.payload.content,
+        timestamp: Date.now()
+      };
+      
+      const newMessages = [...state.messages, assistantMessage];
+      
+      let newConversations = state.conversations;
+      if (state.currentConversation) {
+        newConversations = state.conversations.map(conv => 
+          conv.id === state.currentConversation
+            ? { ...conv, messages: [...conv.messages, assistantMessage] }
+            : conv
+        );
+      }
+      
+      return {
+        ...state,
+        messages: newMessages,
+        conversations: newConversations,
+        isLoading: false
+      };
+    }
+    
+    // ... 其他action处理
+    
+    default:
+      return state;
+  }
+}
+
 export default function Home() {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [currentConversation, setCurrentConversation] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [state, dispatch] = useReducer(reducer, initialState);
   const [showChat, setShowChat] = useState(false);
 
   const createNewConversation = () => {
-    const newConversation: Conversation = {
-      id: Date.now().toString(),
-      messages: [],
-      title: "New Conversation",
-      timestamp: Date.now(),
-    };
-    setConversations([newConversation, ...conversations]);
-    setCurrentConversation(newConversation.id);
-    setMessages([]);
+    dispatch({ type: 'CREATE_NEW_CONVERSATION' });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!state.input.trim()) return;
 
-    const userMessage: Message = { 
-      role: "user", 
-      content: input,
-      timestamp: Date.now()
-    };
-    
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-    setIsLoading(true);
+    dispatch({ type: 'ADD_USER_MESSAGE', payload: { content: state.input } });
 
     try {
       const response = await fetch("/api/chat", {
@@ -183,8 +251,8 @@ export default function Home() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          messages: messages,
-          userMessage: { role: "user", content: input },
+          messages: state.messages,
+          userMessage: { role: "user", content: state.input },
         }),
       });
 
@@ -210,23 +278,7 @@ export default function Home() {
         console.warn("Could not extract content from API response:", data);
       }
 
-      const assistantMessage: Message = {
-        role: "assistant",
-        content: content,
-        timestamp: Date.now(),
-      };
-
-      setMessages(prev => [...prev, assistantMessage]);
-      
-      if (currentConversation) {
-        setConversations(prev => 
-          prev.map(conv => 
-            conv.id === currentConversation 
-              ? { ...conv, messages: [...conv.messages, userMessage, assistantMessage] }
-              : conv
-          )
-        );
-      }
+      dispatch({ type: 'ADD_ASSISTANT_MESSAGE', payload: { content: content || "Sorry, I couldn't generate a response." } });
     } catch (error) {
       console.error("Error in handleSubmit:", error);
       if (error instanceof Error) {
@@ -236,8 +288,6 @@ export default function Home() {
         ? error.message as string 
         : "Failed to get response from AI";
       toast.error(errorMessage);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -294,15 +344,14 @@ export default function Home() {
                     </Button>
                   </div>
                   <ScrollArea className="h-[500px]">
-                    {conversations.map((conv) => (
+                    {state.conversations.map((conv) => (
                       <div
                         key={conv.id}
                         className={`p-3 rounded-lg mb-2 cursor-pointer hover:bg-gray-100 ${
-                          currentConversation === conv.id ? "bg-blue-50" : ""
+                          state.currentConversation === conv.id ? "bg-blue-50" : ""
                         }`}
                         onClick={() => {
-                          setCurrentConversation(conv.id);
-                          setMessages(conv.messages);
+                          dispatch({ type: 'SELECT_CONVERSATION', payload: conv.id });
                         }}
                       >
                         <div className="flex items-center gap-2">
@@ -318,47 +367,18 @@ export default function Home() {
               <div className="col-span-9">
                 <Card className="mb-4">
                   <ScrollArea className="h-[500px] p-4">
-                    {messages.map((message, index) => (
-                      <div
-                        key={`${message.role}-${index}-${message.timestamp}`}
-                        className={`flex ${
-                          message.role === "assistant" ? "justify-start" : "justify-end"
-                        } mb-4`}
-                      >
-                        <div
-                          className={`p-3 rounded-lg ${
-                            message.role === "assistant"
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted"
-                          } max-w-[80%]`}
-                        >
-                          {message.content ? (
-                            <p className="whitespace-pre-wrap break-words">{message.content}</p>
-                          ) : (
-                            <p className="text-gray-400">Empty message</p>
-                          )}
-                          <div className="text-xs opacity-50 text-right mt-1">
-                            {new Date(message.timestamp).toLocaleTimeString()}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    {isLoading && (
-                      <div className="flex items-center justify-center p-4">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                      </div>
-                    )}
+                    <MessageList messages={state.messages} isLoading={state.isLoading} />
                   </ScrollArea>
                 </Card>
 
                 <form onSubmit={handleSubmit} className="flex gap-2">
                   <Input
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
+                    value={state.input}
+                    onChange={(e) => dispatch({ type: 'ADD_USER_MESSAGE', payload: { content: e.target.value } })}
                     placeholder="Type your message..."
                     className="flex-1"
                   />
-                  <Button type="submit" disabled={isLoading}>
+                  <Button type="submit" disabled={state.isLoading}>
                     <Send className="w-4 h-4 mr-2" />
                     Send
                   </Button>
