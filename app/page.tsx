@@ -149,6 +149,7 @@ type State = {
   conversations: Conversation[];
   currentConversation: string | null;
   isLoading: boolean;
+  input: string;
 };
 
 // 定义action类型
@@ -158,14 +159,16 @@ type Action =
   | { type: 'SET_LOADING', payload: boolean }
   | { type: 'CREATE_NEW_CONVERSATION' }
   | { type: 'SELECT_CONVERSATION', payload: string }
-  | { type: 'SET_MESSAGES', payload: Message[] };
+  | { type: 'SET_MESSAGES', payload: Message[] }
+  | { type: 'SET_INPUT', payload: string };
 
 // 初始状态
 const initialState: State = {
   messages: [],
   conversations: [],
   currentConversation: null,
-  isLoading: false
+  isLoading: false,
+  input: ""
 };
 
 // Reducer函数
@@ -193,6 +196,7 @@ function reducer(state: State, action: Action): State {
         ...state,
         messages: newMessages,
         conversations: newConversations,
+        input: "",
         isLoading: true
       };
     }
@@ -223,7 +227,37 @@ function reducer(state: State, action: Action): State {
       };
     }
     
-    // ... 其他action处理
+    case 'SET_INPUT':
+      return {
+        ...state,
+        input: action.payload
+      };
+    
+    case 'CREATE_NEW_CONVERSATION': {
+      const newConversation: Conversation = {
+        id: Date.now().toString(),
+        messages: [],
+        title: "New Conversation",
+        timestamp: Date.now(),
+      };
+      
+      return {
+        ...state,
+        conversations: [newConversation, ...state.conversations],
+        currentConversation: newConversation.id,
+        messages: []
+      };
+    }
+    
+    case 'SELECT_CONVERSATION': {
+      const conversation = state.conversations.find(conv => conv.id === action.payload);
+      
+      return {
+        ...state,
+        currentConversation: action.payload,
+        messages: conversation ? conversation.messages : []
+      };
+    }
     
     default:
       return state;
@@ -243,6 +277,7 @@ export default function Home() {
     if (!state.input.trim()) return;
 
     dispatch({ type: 'ADD_USER_MESSAGE', payload: { content: state.input } });
+    dispatch({ type: 'SET_INPUT', payload: "" });
 
     try {
       const response = await fetch("/api/chat", {
@@ -374,7 +409,7 @@ export default function Home() {
                 <form onSubmit={handleSubmit} className="flex gap-2">
                   <Input
                     value={state.input}
-                    onChange={(e) => dispatch({ type: 'ADD_USER_MESSAGE', payload: { content: e.target.value } })}
+                    onChange={(e) => dispatch({ type: 'SET_INPUT', payload: e.target.value })}
                     placeholder="Type your message..."
                     className="flex-1"
                   />
