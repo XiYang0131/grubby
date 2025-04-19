@@ -6,6 +6,9 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   images: { unoptimized: true },
+  
+  // 临时禁用严格模式
+  reactStrictMode: false,
 };
 
 module.exports = nextConfig;
