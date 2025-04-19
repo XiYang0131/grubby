@@ -16,8 +16,6 @@ export async function POST(request) {
       });
     }
     
-    console.log("Sending request to OpenRouter with payload");
-    
     // 创建系统提示
     const systemPrompt = {
       role: "system",
@@ -40,177 +38,70 @@ Remember that being conversational doesn't mean being unprofessional or inaccura
 You represent Grubby AI, which prides itself on creating AI experiences that feel natural and engaging.`
     };
     
-    let retries = 0;
-    const maxRetries = 2;
-    let lastError = null;
-
-    while (retries <= maxRetries) {
-      try {
-        // 确保消息格式正确
-        const formattedMessages = [systemPrompt, ...(messages || []), userMessage].map(({ role, content }) => {
-          // 确保role是有效值
-          const validRole = ["system", "user", "assistant"].includes(role) ? role : "user";
-          return { role: validRole, content: content || "" };
-        });
-        
-        // 添加超时控制
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
-
-        // 使用OpenRouter API
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`,
-            "HTTP-Referer": request.headers.get("origin") || "https://yourwebsite.com",
-          },
-          body: JSON.stringify({
-            model: "anthropic/claude-instant-v1",
-            messages: formattedMessages,
-            temperature: 0.7,
-            max_tokens: 1000,
-          }),
-          signal: controller.signal,
-        });
-        
-        clearTimeout(timeoutId); // 清除超时
-        
-        console.log("OpenRouter response status:", response.status);
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`OpenRouter API error (attempt ${retries+1}/${maxRetries+1}):`, errorText);
-          
-          try {
-            // 尝试解析错误响应为JSON
-            const errorJson = JSON.parse(errorText);
-            console.error("Parsed error:", errorJson);
-            
-            // 检查是否是配额或认证问题
-            if (errorJson.error && (
-                errorJson.error.includes("quota") || 
-                errorJson.error.includes("authentication") || 
-                errorJson.error.includes("unauthorized")
-            )) {
-              console.error("API key or quota issue detected");
-              // 直接返回错误，不再重试
-              return new Response(JSON.stringify({ 
-                error: "API key or quota issue: " + errorJson.error 
-              }), {
-                status: 500,
-                headers: { "Content-Type": "application/json" }
-              });
-            }
-          } catch (e) {
-            // 错误文本不是JSON格式
-            console.error("Could not parse error response as JSON");
-          }
-          
-          lastError = errorText;
-          retries++;
-          
-          if (retries <= maxRetries) {
-            console.log(`Retrying in 1 second... (attempt ${retries+1}/${maxRetries+1})`);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            continue;
-          } else {
-            // 如果OpenRouter失败，尝试使用备用服务
-            console.log("Trying fallback API service...");
-            try {
-              // 这里可以是另一个API服务，如直接调用OpenAI
-              const fallbackResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`, // 需要设置这个环境变量
-                },
-                body: JSON.stringify({
-                  model: "gpt-3.5-turbo",
-                  messages: formattedMessages,
-                  temperature: 0.7,
-                  max_tokens: 1000,
-                }),
-              });
-              
-              if (fallbackResponse.ok) {
-                const fallbackData = await fallbackResponse.json();
-                console.log("Fallback API successful");
-                return new Response(JSON.stringify(fallbackData), {
-                  status: 200,
-                  headers: { "Content-Type": "application/json" }
-                });
-              }
-            } catch (fallbackError) {
-              console.error("Fallback API also failed:", fallbackError);
-            }
-          }
-        }
-        
-        const data = await response.json();
-        console.log("API response received");
-        console.log("API response data:", JSON.stringify(data, null, 2));
-        
-        // 检查响应格式
-        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-          console.warn("Unexpected API response format:", data);
-          // 尝试适应不同的响应格式
-          const formattedResponse = {
-            choices: [
-              {
-                message: {
-                  content: data.response || data.message || data.content || 
-                          (data.choices && data.choices[0] && data.choices[0].message ? 
-                           data.choices[0].message.content : "AI response format error")
-                }
-              }
-            ]
-          };
-          return new Response(JSON.stringify(formattedResponse), {
-            status: 200,
-            headers: { "Content-Type": "application/json" }
-          });
-        }
-        
-        return new Response(JSON.stringify(data), {
-          status: 200,
-          headers: { "Content-Type": "application/json" }
-        });
-      } catch (error) {
-        clearTimeout(timeoutId); // 确保清除超时
-        if (error.name === 'AbortError') {
-          console.error("Request timed out");
-          // 处理超时...
-        }
-        console.error("API route error:", error);
-        retries++;
-        
-        if (retries <= maxRetries) {
-          console.log(`Retrying after error... (attempt ${retries+1}/${maxRetries+1})`);
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          continue;
-        }
+    // 简化的错误处理和重试逻辑
+    try {
+      // 确保消息格式正确
+      const formattedMessages = [systemPrompt, ...(messages || []), userMessage].map(({ role, content }) => {
+        const validRole = ["system", "user", "assistant"].includes(role) ? role : "user";
+        return { role: validRole, content: content || "" };
+      });
+      
+      // 使用OpenRouter API，不使用超时控制
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+          "HTTP-Referer": request.headers.get("origin") || "https://yourwebsite.com",
+        },
+        body: JSON.stringify({
+          model: "anthropic/claude-instant-v1",
+          messages: formattedMessages,
+          temperature: 0.7,
+          max_tokens: 1000,
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API responded with status ${response.status}`);
       }
+      
+      const data = await response.json();
+      console.log("API response received");
+      
+      return new Response(JSON.stringify(data), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      });
+    } catch (error) {
+      console.error("API request failed:", error);
+      
+      // 返回一个本地响应，确保前端能够处理
+      return new Response(JSON.stringify({
+        choices: [
+          {
+            message: {
+              content: "I'm sorry, I'm having trouble connecting to my knowledge base right now. This could be due to high demand or temporary service issues. Please try again in a few moments."
+            }
+          }
+        ]
+      }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      });
     }
-    
-    // 在所有API调用都失败后，提供本地响应
-    return new Response(JSON.stringify({
+  } catch (error) {
+    console.error("API route error:", error);
+    return new Response(JSON.stringify({ 
       choices: [
         {
           message: {
-            content: "I'm sorry, I'm having trouble connecting to my knowledge base right now. This could be due to high demand or temporary service issues. Please try again in a few moments, or ask me something else in the meantime."
+            content: "Sorry, there was an error processing your request. Please try again."
           }
         }
       ]
     }), {
       status: 200,
-      headers: { "Content-Type": "application/json" }
-    });
-    
-  } catch (error) {
-    console.error("API route error:", error);
-    return new Response(JSON.stringify({ error: error.message || "Unknown error occurred" }), {
-      status: 500,
       headers: { "Content-Type": "application/json" }
     });
   }
