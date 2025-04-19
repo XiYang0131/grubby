@@ -66,7 +66,7 @@ You represent Grubby AI, which prides itself on creating AI experiences that fee
             "HTTP-Referer": request.headers.get("origin") || "https://yourwebsite.com",
           },
           body: JSON.stringify({
-            model: "openai/gpt-3.5-turbo",
+            model: "anthropic/claude-instant-v1",
             messages: formattedMessages,
             temperature: 0.7,
             max_tokens: 1000,
@@ -81,6 +81,32 @@ You represent Grubby AI, which prides itself on creating AI experiences that fee
         if (!response.ok) {
           const errorText = await response.text();
           console.error(`OpenRouter API error (attempt ${retries+1}/${maxRetries+1}):`, errorText);
+          
+          try {
+            // 尝试解析错误响应为JSON
+            const errorJson = JSON.parse(errorText);
+            console.error("Parsed error:", errorJson);
+            
+            // 检查是否是配额或认证问题
+            if (errorJson.error && (
+                errorJson.error.includes("quota") || 
+                errorJson.error.includes("authentication") || 
+                errorJson.error.includes("unauthorized")
+            )) {
+              console.error("API key or quota issue detected");
+              // 直接返回错误，不再重试
+              return new Response(JSON.stringify({ 
+                error: "API key or quota issue: " + errorJson.error 
+              }), {
+                status: 500,
+                headers: { "Content-Type": "application/json" }
+              });
+            }
+          } catch (e) {
+            // 错误文本不是JSON格式
+            console.error("Could not parse error response as JSON");
+          }
+          
           lastError = errorText;
           retries++;
           
@@ -89,10 +115,35 @@ You represent Grubby AI, which prides itself on creating AI experiences that fee
             await new Promise(resolve => setTimeout(resolve, 1000));
             continue;
           } else {
-            return new Response(JSON.stringify({ error: `API request failed after ${maxRetries+1} attempts` }), {
-              status: 500,
-              headers: { "Content-Type": "application/json" }
-            });
+            // 如果OpenRouter失败，尝试使用备用服务
+            console.log("Trying fallback API service...");
+            try {
+              // 这里可以是另一个API服务，如直接调用OpenAI
+              const fallbackResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`, // 需要设置这个环境变量
+                },
+                body: JSON.stringify({
+                  model: "gpt-3.5-turbo",
+                  messages: formattedMessages,
+                  temperature: 0.7,
+                  max_tokens: 1000,
+                }),
+              });
+              
+              if (fallbackResponse.ok) {
+                const fallbackData = await fallbackResponse.json();
+                console.log("Fallback API successful");
+                return new Response(JSON.stringify(fallbackData), {
+                  status: 200,
+                  headers: { "Content-Type": "application/json" }
+                });
+              }
+            } catch (fallbackError) {
+              console.error("Fallback API also failed:", fallbackError);
+            }
           }
         }
         
@@ -142,11 +193,17 @@ You represent Grubby AI, which prides itself on creating AI experiences that fee
       }
     }
     
-    // 确保在所有重试失败后返回一个响应
-    return new Response(JSON.stringify({ 
-      error: lastError || "Failed to get response after multiple attempts" 
+    // 在所有API调用都失败后，提供本地响应
+    return new Response(JSON.stringify({
+      choices: [
+        {
+          message: {
+            content: "I'm sorry, I'm having trouble connecting to my knowledge base right now. This could be due to high demand or temporary service issues. Please try again in a few moments, or ask me something else in the meantime."
+          }
+        }
+      ]
     }), {
-      status: 500,
+      status: 200,
       headers: { "Content-Type": "application/json" }
     });
     
