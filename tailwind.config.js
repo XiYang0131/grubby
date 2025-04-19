@@ -12,6 +12,10 @@ module.exports = {
       fontFamily: {
         sans: ['var(--font-inter)', 'var(--font-noto-sans-sc)', 'sans-serif'],
       },
+      colors: {
+        border: "hsl(var(--border))",
+        // ... 其他颜色变量
+      },
       // ... 其他配置
     },
   },
