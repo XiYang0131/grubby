@@ -18,33 +18,25 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isLoading }) => {
     <div className="space-y-4">
       {messages.map((message, index) => (
         <div
-          key={`${message.role}-${index}-${message.timestamp}`}
-          className={`flex ${
-            message.role === "assistant" ? "justify-start" : "justify-end"
-          } mb-4`}
+          key={index}
+          className={`p-3 rounded-lg ${
+            message.role === "assistant"
+              ? "bg-blue-100 text-blue-900"
+              : "bg-gray-100 text-gray-900"
+          } max-w-[80%] ${
+            message.role === "assistant" ? "mr-auto" : "ml-auto"
+          }`}
         >
-          <div
-            className={`p-3 rounded-lg ${
-              message.role === "assistant"
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted"
-            } max-w-[80%]`}
-          >
-            {message.content ? (
-              <p className="whitespace-pre-wrap break-words">{message.content}</p>
-            ) : (
-              <p className="text-gray-400">Empty message</p>
-            )}
-            <div className="text-xs opacity-50 text-right mt-1">
-              {new Date(message.timestamp).toLocaleTimeString()}
-            </div>
+          <p>{message.content}</p>
+          <div className="text-xs text-gray-500 mt-1">
+            {new Date(message.timestamp).toLocaleTimeString()}
           </div>
         </div>
       ))}
       
       {isLoading && (
-        <div className="flex items-center justify-center p-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="flex justify-center p-4">
+          <div className="animate-spin h-6 w-6 border-2 border-blue-500 rounded-full border-t-transparent"></div>
         </div>
       )}
     </div>
