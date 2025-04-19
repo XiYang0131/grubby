@@ -14,7 +14,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import MessageList from "@/components/MessageList";
+import SimpleMessageList from "@/components/SimpleMessageList";
 
 interface Message {
   role: "user" | "assistant";
@@ -402,7 +402,7 @@ export default function Home() {
               <div className="col-span-9">
                 <Card className="mb-4">
                   <ScrollArea className="h-[500px] p-4">
-                    <MessageList messages={state.messages} isLoading={state.isLoading} />
+                    <SimpleMessageList messages={state.messages} isLoading={state.isLoading} />
                   </ScrollArea>
                 </Card>
 

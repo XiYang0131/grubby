@@ -1,9 +1,22 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Inter, Noto_Sans_SC } from 'next/font/google';
 import Script from 'next/script';
 
-const inter = Inter({ subsets: ['latin'] });
+// 加载Inter字体（拉丁字符）
+const inter = Inter({ 
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+
+// 加载Noto Sans SC字体（中文字符）
+const notoSansSC = Noto_Sans_SC({ 
+  subsets: ['latin'],
+  weight: ['400', '500', '700'],
+  variable: '--font-noto-sans-sc',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'Grubby AI | Advanced AI Assistant Powered by HumanizeAI',
@@ -20,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="zh-CN">
       <head>
         {/* Google Analytics */}
         <Script
@@ -40,7 +53,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={inter.className}>{children}</body>
+      <body className={`${inter.variable} ${notoSansSC.variable} font-sans`}>{children}</body>
     </html>
   );
 }
