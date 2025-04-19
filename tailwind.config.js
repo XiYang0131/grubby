@@ -15,6 +15,7 @@ module.exports = {
       colors: {
         border: "hsl(var(--border))",
         background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
         // ... 其他颜色变量
       },
       // ... 其他配置
