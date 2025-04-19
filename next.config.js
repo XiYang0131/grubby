@@ -10,11 +10,8 @@ const nextConfig = {
   // 临时禁用严格模式
   reactStrictMode: false,
   
-  // 简化配置，不使用webpack
+  // 使用有效的experimental选项
   experimental: {
-    // 忽略构建错误，继续部署
-    skipTrailingSlashRedirect: true,
-    skipMiddlewareUrlNormalize: true,
     // 忽略图像优化错误
     forceSwcTransforms: true,
   },
