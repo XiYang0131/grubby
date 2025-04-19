@@ -194,9 +194,13 @@ export default function Home() {
 
       const data = await response.json();
       console.log("Response from API:", data);
-      
       console.log("API response structure:", JSON.stringify(data, null, 2));
-      
+
+      // 检查响应格式是否符合预期
+      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+        console.warn("Unexpected API response format, attempting to adapt:", data);
+      }
+
       const assistantMessage: Message = {
         role: "assistant",
         content: data.choices && data.choices[0] && data.choices[0].message 
