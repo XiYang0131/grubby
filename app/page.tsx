@@ -13,6 +13,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 interface Message {
   role: "user" | "assistant";
@@ -196,27 +197,35 @@ export default function Home() {
       console.log("Response from API:", data);
       console.log("API response structure:", JSON.stringify(data, null, 2));
 
-      // 检查响应格式是否符合预期
-      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-        console.warn("Unexpected API response format, attempting to adapt:", data);
+      if (!data) {
+        console.warn("API returned empty data");
+        throw new Error("Empty response from API");
+      }
+
+      const content = data.choices && data.choices[0] && data.choices[0].message 
+        ? data.choices[0].message.content 
+        : data.message || data.content || "Sorry, I couldn't generate a response.";
+      
+      if (!content) {
+        console.warn("Could not extract content from API response:", data);
       }
 
       const assistantMessage: Message = {
         role: "assistant",
-        content: data.choices && data.choices[0] && data.choices[0].message 
-          ? data.choices[0].message.content 
-          : data.message || data.content || "Sorry, I couldn't generate a response.",
+        content: content,
         timestamp: Date.now(),
       };
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages(prev => [...prev, assistantMessage]);
       
       if (currentConversation) {
-        setConversations(conversations.map(conv => 
-          conv.id === currentConversation 
-            ? { ...conv, messages: [...conv.messages, userMessage, assistantMessage] }
-            : conv
-        ));
+        setConversations(prev => 
+          prev.map(conv => 
+            conv.id === currentConversation 
+              ? { ...conv, messages: [...conv.messages, userMessage, assistantMessage] }
+              : conv
+          )
+        );
       }
     } catch (error) {
       console.error("Error in handleSubmit:", error);
@@ -259,548 +268,537 @@ export default function Home() {
 
   if (showChat) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-        <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-          <header className="flex justify-between items-center mb-8">
-            <div className="flex items-center gap-3">
-              <Sparkles className="w-8 h-8 text-blue-600" />
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 text-transparent bg-clip-text">
-                Grubby AI
-              </h1>
-            </div>
-            <Button variant="outline" size="icon" onClick={() => setShowChat(false)}>
-              <Settings className="w-4 h-4" />
-            </Button>
-          </header>
+      <ErrorBoundary>
+        <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+          <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+            <header className="flex justify-between items-center mb-8">
+              <div className="flex items-center gap-3">
+                <Sparkles className="w-8 h-8 text-blue-600" />
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 text-transparent bg-clip-text">
+                  Grubby AI
+                </h1>
+              </div>
+              <Button variant="outline" size="icon" onClick={() => setShowChat(false)}>
+                <Settings className="w-4 h-4" />
+              </Button>
+            </header>
 
-          <div className="grid grid-cols-12 gap-6">
-            <div className="col-span-3">
-              <Card className="p-4">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-lg font-semibold">History</h2>
-                  <Button variant="ghost" size="sm" onClick={createNewConversation}>
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    New Chat
-                  </Button>
-                </div>
-                <ScrollArea className="h-[500px]">
-                  {conversations.map((conv) => (
-                    <div
-                      key={conv.id}
-                      className={`p-3 rounded-lg mb-2 cursor-pointer hover:bg-gray-100 ${
-                        currentConversation === conv.id ? "bg-blue-50" : ""
-                      }`}
-                      onClick={() => {
-                        setCurrentConversation(conv.id);
-                        setMessages(conv.messages);
-                      }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Bot className="w-4 h-4" />
-                        <span className="text-sm font-medium truncate">{conv.title}</span>
-                      </div>
-                    </div>
-                  ))}
-                </ScrollArea>
-              </Card>
-            </div>
-
-            <div className="col-span-9">
-              <Card className="mb-4">
-                <ScrollArea className="h-[500px] p-4">
-                  {messages.map((message, index) => (
-                    <div
-                      key={index}
-                      className={`mb-6 ${
-                        message.role === "user" ? "ml-auto" : ""
-                      }`}
-                    >
-                      <div className={`flex items-start gap-3 max-w-[80%] ${
-                        message.role === "user" ? "ml-auto flex-row-reverse" : ""
-                      }`}>
-                        <div className={`p-2 rounded-full ${
-                          message.role === "user" ? "bg-blue-100" : "bg-gray-100"
-                        }`}>
-                          {message.role === "user" ? (
-                            <MessageSquare className="w-5 h-5" />
-                          ) : (
-                            <Bot className="w-5 h-5" />
-                          )}
+            <div className="grid grid-cols-12 gap-6">
+              <div className="col-span-3">
+                <Card className="p-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-lg font-semibold">History</h2>
+                    <Button variant="ghost" size="sm" onClick={createNewConversation}>
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      New Chat
+                    </Button>
+                  </div>
+                  <ScrollArea className="h-[500px]">
+                    {conversations.map((conv) => (
+                      <div
+                        key={conv.id}
+                        className={`p-3 rounded-lg mb-2 cursor-pointer hover:bg-gray-100 ${
+                          currentConversation === conv.id ? "bg-blue-50" : ""
+                        }`}
+                        onClick={() => {
+                          setCurrentConversation(conv.id);
+                          setMessages(conv.messages);
+                        }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Bot className="w-4 h-4" />
+                          <span className="text-sm font-medium truncate">{conv.title}</span>
                         </div>
-                        <div className={`flex-1 p-4 rounded-lg ${
-                          message.role === "user" 
-                            ? "bg-blue-500 text-white" 
-                            : "bg-white border"
-                        }`}>
-                          <p className="whitespace-pre-wrap">{message.content}</p>
-                          <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
-                            <button 
-                              onClick={() => copyToClipboard(message.content)}
-                              className="hover:text-gray-700"
-                            >
-                              <Copy className="w-4 h-4" />
-                            </button>
-                            <span>
-                              {new Date(message.timestamp).toLocaleTimeString()}
-                            </span>
+                      </div>
+                    ))}
+                  </ScrollArea>
+                </Card>
+              </div>
+
+              <div className="col-span-9">
+                <Card className="mb-4">
+                  <ScrollArea className="h-[500px] p-4">
+                    {messages.map((message, index) => (
+                      <div
+                        key={`${message.role}-${index}-${message.timestamp}`}
+                        className={`flex ${
+                          message.role === "assistant" ? "justify-start" : "justify-end"
+                        } mb-4`}
+                      >
+                        <div
+                          className={`p-3 rounded-lg ${
+                            message.role === "assistant"
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted"
+                          } max-w-[80%]`}
+                        >
+                          {message.content ? (
+                            <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                          ) : (
+                            <p className="text-gray-400">Empty message</p>
+                          )}
+                          <div className="text-xs opacity-50 text-right mt-1">
+                            {new Date(message.timestamp).toLocaleTimeString()}
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                  {isLoading && (
-                    <div className="flex items-center justify-center p-4">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                    </div>
-                  )}
-                </ScrollArea>
-              </Card>
+                    ))}
+                    {isLoading && (
+                      <div className="flex items-center justify-center p-4">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                      </div>
+                    )}
+                  </ScrollArea>
+                </Card>
 
-              <form onSubmit={handleSubmit} className="flex gap-2">
-                <Input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Type your message..."
-                  className="flex-1"
-                />
-                <Button type="submit" disabled={isLoading}>
-                  <Send className="w-4 h-4 mr-2" />
-                  Send
-                </Button>
-              </form>
+                <form onSubmit={handleSubmit} className="flex gap-2">
+                  <Input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="Type your message..."
+                    className="flex-1"
+                  />
+                  <Button type="submit" disabled={isLoading}>
+                    <Send className="w-4 h-4 mr-2" />
+                    Send
+                  </Button>
+                </form>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </ErrorBoundary>
     );
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <header className="bg-white border-b sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-8 w-8 text-blue-600" />
-              <span className="text-xl font-bold">Grubby AI</span>
-            </div>
-            <nav className="hidden md:flex items-center gap-6">
-              <a href="#features" className="text-gray-600 hover:text-gray-900">Features</a>
-              <a href="#use-cases" className="text-gray-600 hover:text-gray-900">Use Cases</a>
-              <a href="#how-it-works" className="text-gray-600 hover:text-gray-900">How it Works</a>
-              <a href="#pricing" className="text-gray-600 hover:text-gray-900">Pricing</a>
-              <Button onClick={() => setShowChat(true)}>Try Now</Button>
-            </nav>
-          </div>
-        </div>
-      </header>
-
-      {/* Hero Section */}
-      <section className="bg-gradient-to-b from-blue-50 to-white py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h1 className="text-6xl font-bold text-gray-900 mb-6">
-              Transform Your Workflow with
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 text-transparent bg-clip-text"> Grubby AI</span>
-            </h1>
-            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              Experience the next generation of AI assistance with Grubby AI. Powered by Optimus Alpha, Grubby AI understands context, learns from feedback, and delivers accurate results in real-time.
-            </p>
-            <div className="flex gap-4 justify-center">
-              <Button size="lg" onClick={() => setShowChat(true)}>
-                Start Free Trial <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-              <Button size="lg" variant="outline" onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}>
-                Explore Features
-              </Button>
-            </div>
-            <div className="mt-12 flex justify-center gap-8">
-              <div className="text-center">
-                <h3 className="text-3xl font-bold text-gray-900">99.99%</h3>
-                <p className="text-gray-600">Uptime</p>
-              </div>
-              <div className="text-center">
-                <h3 className="text-3xl font-bold text-gray-900">50M+</h3>
-                <p className="text-gray-600">Queries Processed</p>
-              </div>
-              <div className="text-center">
-                <h3 className="text-3xl font-bold text-gray-900">10k+</h3>
-                <p className="text-gray-600">Enterprise Users</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section id="features" className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">Powerful Features</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Our AI assistant combines cutting-edge technology with practical features
-              designed to enhance your productivity and decision-making capabilities.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {features.map((feature, index) => (
-              <Card key={index} className="p-6 hover:shadow-lg transition-shadow">
-                <div className="bg-blue-50 rounded-full p-3 w-fit mb-4">
-                  <feature.icon className="h-8 w-8 text-blue-600" />
-                </div>
-                <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                <p className="text-gray-600">{feature.description}</p>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Use Cases */}
-      <section id="use-cases" className="bg-gray-50 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">Use Cases</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Discover how our AI assistant can transform different aspects of your business
-              with intelligent automation and support.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {useCases.map((useCase, index) => (
-              <Card key={index} className="p-6 hover:shadow-lg transition-shadow">
-                <div className="bg-purple-50 rounded-full p-3 w-fit mb-4">
-                  <useCase.icon className="h-8 w-8 text-purple-600" />
-                </div>
-                <h3 className="text-xl font-semibold mb-2">{useCase.title}</h3>
-                <p className="text-gray-600">{useCase.description}</p>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How it Works */}
-      <section id="how-it-works" className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">How It Works</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Get started with our AI assistant in three simple steps and transform
-              your workflow immediately.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="bg-blue-100 rounded-full p-6 inline-block mb-6">
-                <Rocket className="h-12 w-12 text-blue-600" />
-              </div>
-              <h3 className="text-2xl font-semibold mb-4">1. Quick Setup</h3>
-              <p className="text-gray-600">
-                Sign up and integrate with your existing tools in minutes. No complex
-                configuration required.
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="bg-blue-100 rounded-full p-6 inline-block mb-6">
-                <Brain className="h-12 w-12 text-blue-600" />
-              </div>
-              <h3 className="text-2xl font-semibold mb-4">2. AI Learning</h3>
-              <p className="text-gray-600">
-                Our AI adapts to your needs and learns from interactions to provide
-                increasingly relevant responses.
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="bg-blue-100 rounded-full p-6 inline-block mb-6">
-                <Zap className="h-12 w-12 text-blue-600" />
-              </div>
-              <h3 className="text-2xl font-semibold mb-4">3. Instant Results</h3>
-              <p className="text-gray-600">
-                Get immediate, accurate responses and solutions to boost your
-                productivity.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="bg-gray-50 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">Trusted by Industry Leaders</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              See how organizations are transforming their operations with our AI assistant.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <Card key={index} className="p-6">
-                <div className="flex items-center mb-6">
-                  <img
-                    src={testimonial.image}
-                    alt={testimonial.name}
-                    className="h-14 w-14 rounded-full mr-4 object-cover"
-                  />
-                  <div>
-                    <h3 className="font-semibold text-lg">{testimonial.name}</h3>
-                    <p className="text-gray-600">{testimonial.role}</p>
-                  </div>
-                </div>
-                <p className="text-gray-600 mb-6 italic">"{testimonial.content}"</p>
-                <div className="flex text-yellow-400">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="h-5 w-5 fill-current" />
-                  ))}
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing */}
-      <section id="pricing" className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">Simple, Transparent Pricing</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Choose the perfect plan for your needs. All plans include core features
-              with additional benefits as you scale.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                name: 'Basic',
-                price: '0',
-                features: [
-                  '100 messages/month',
-                  'Basic AI model access',
-                  'Email support',
-                  'API access',
-                  'Basic analytics'
-                ]
-              },
-              {
-                name: 'Pro',
-                price: '29',
-                features: [
-                  '1000 messages/month',
-                  'Advanced AI model access',
-                  'Priority support',
-                  'Full API access',
-                  'Advanced analytics',
-                  'Custom integrations',
-                  'Team collaboration'
-                ]
-              },
-              {
-                name: 'Enterprise',
-                price: '99',
-                features: [
-                  'Unlimited messages',
-                  'Custom AI model training',
-                  '24/7 dedicated support',
-                  'Enterprise API access',
-                  'Advanced security features',
-                  'Custom integrations',
-                  'Team collaboration',
-                  'Dedicated account manager',
-                  'Custom contracts'
-                ]
-              }
-            ].map((plan, index) => (
-              <Card 
-                key={index} 
-                className={`p-8 ${index === 1 ? 'border-blue-500 border-2 relative' : ''}`}
-              >
-                {index === 1 && (
-                  <div className="absolute top-0 right-0 bg-blue-500 text-white px-4 py-1 rounded-bl-lg rounded-tr-lg text-sm font-medium">
-                    Popular
-                  </div>
-                )}
-                <h3 className="text-2xl font-semibold mb-2">{plan.name}</h3>
-                <div className="mb-6">
-                  <span className="text-5xl font-bold">${plan.price}</span>
-                  <span className="text-gray-600">/month</span>
-                </div>
-                <ul className="space-y-4 mb-8">
-                  {plan.features.map((feature, i) => (
-                    <li key={i} className="flex items-center">
-                      <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Button
-                  className="w-full"
-                  variant={index === 1 ? "default" : "outline"}
-                  size="lg"
-                  onClick={() => setShowChat(true)}
-                >
-                  {index === 0 ? 'Start Free' : 'Get Started'}
-                </Button>
-              </Card>
-            ))}
-          </div>
-          <p className="text-center mt-8 text-gray-600">
-            Need a custom plan? <Button variant="link" className="text-blue-600">Contact us</Button>
-          </p>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section className="bg-gray-50 py-20">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">Frequently Asked Questions</h2>
-            <p className="text-xl text-gray-600">
-              Find answers to common questions about our AI assistant.
-            </p>
-          </div>
-          <Card className="p-6">
-            <Accordion type="single" collapsible className="space-y-4">
-              {faqs.map((faq, index) => (
-                <AccordionItem key={index} value={`item-${index}`}>
-                  <AccordionTrigger className="text-lg font-medium">
-                    {faq.question}
-                  </AccordionTrigger>
-                  <AccordionContent className="text-gray-600">
-                    {faq.answer}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </Card>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-12 text-center text-white">
-            <h2 className="text-4xl font-bold mb-4">Ready to Transform Your Workflow?</h2>
-            <p className="text-xl mb-8 max-w-2xl mx-auto">
-              Join thousands of professionals who are already using our AI assistant
-              to enhance their productivity and decision-making.
-            </p>
-            <div className="flex gap-4 justify-center">
-              <Button
-                size="lg"
-                variant="secondary"
-                onClick={() => setShowChat(true)}
-              >
-                Start Free Trial
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="bg-transparent border-white text-white hover:bg-white hover:text-blue-600"
-                onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
-              >
-                View Pricing
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* About Grubby AI Section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">About Grubby AI</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Grubby AI represents the next evolution in artificial intelligence assistants. Built on the powerful Optimus Alpha model, Grubby AI combines advanced natural language understanding with practical features designed for real-world applications.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <h3 className="text-2xl font-bold mb-4">Why Choose Grubby AI?</h3>
-              <ul className="space-y-4">
-                <li className="flex items-start">
-                  <Check className="h-6 w-6 text-green-500 mr-2 flex-shrink-0 mt-1" />
-                  <span>Superior understanding of context and nuance compared to other AI assistants</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="h-6 w-6 text-green-500 mr-2 flex-shrink-0 mt-1" />
-                  <span>Enterprise-grade security with end-to-end encryption</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="h-6 w-6 text-green-500 mr-2 flex-shrink-0 mt-1" />
-                  <span>Customizable to your specific industry needs and workflows</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="h-6 w-6 text-green-500 mr-2 flex-shrink-0 mt-1" />
-                  <span>Seamless integration with your existing tools and platforms</span>
-                </li>
-              </ul>
-            </div>
-            <div className="bg-blue-50 p-8 rounded-lg">
-              <h3 className="text-2xl font-bold mb-4">The Grubby AI Difference</h3>
-              <p className="mb-4">
-                Unlike other AI solutions that offer generic responses, Grubby AI is designed to understand the specific context of your queries and provide tailored, actionable insights.
-              </p>
-              <p>
-                Our continuous learning system means Grubby AI gets better with every interaction, adapting to your preferences and needs over time.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="h-6 w-6 text-blue-400" />
+    <ErrorBoundary>
+      <div className="min-h-screen">
+        {/* Header */}
+        <header className="bg-white border-b sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-8 w-8 text-blue-600" />
                 <span className="text-xl font-bold">Grubby AI</span>
               </div>
-              <p className="text-gray-400">
-                Next-generation AI assistant for businesses and individuals.
+              <nav className="hidden md:flex items-center gap-6">
+                <a href="#features" className="text-gray-600 hover:text-gray-900">Features</a>
+                <a href="#use-cases" className="text-gray-600 hover:text-gray-900">Use Cases</a>
+                <a href="#how-it-works" className="text-gray-600 hover:text-gray-900">How it Works</a>
+                <a href="#pricing" className="text-gray-600 hover:text-gray-900">Pricing</a>
+                <Button onClick={() => setShowChat(true)}>Try Now</Button>
+              </nav>
+            </div>
+          </div>
+        </header>
+
+        {/* Hero Section */}
+        <section className="bg-gradient-to-b from-blue-50 to-white py-24">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <h1 className="text-6xl font-bold text-gray-900 mb-6">
+                Transform Your Workflow with
+                <span className="bg-gradient-to-r from-blue-600 to-purple-600 text-transparent bg-clip-text"> Grubby AI</span>
+              </h1>
+              <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+                Experience the next generation of AI assistance with Grubby AI. Powered by Optimus Alpha, Grubby AI understands context, learns from feedback, and delivers accurate results in real-time.
+              </p>
+              <div className="flex gap-4 justify-center">
+                <Button size="lg" onClick={() => setShowChat(true)}>
+                  Start Free Trial <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+                <Button size="lg" variant="outline" onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}>
+                  Explore Features
+                </Button>
+              </div>
+              <div className="mt-12 flex justify-center gap-8">
+                <div className="text-center">
+                  <h3 className="text-3xl font-bold text-gray-900">99.99%</h3>
+                  <p className="text-gray-600">Uptime</p>
+                </div>
+                <div className="text-center">
+                  <h3 className="text-3xl font-bold text-gray-900">50M+</h3>
+                  <p className="text-gray-600">Queries Processed</p>
+                </div>
+                <div className="text-center">
+                  <h3 className="text-3xl font-bold text-gray-900">10k+</h3>
+                  <p className="text-gray-600">Enterprise Users</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Features Section */}
+        <section id="features" className="py-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-4xl font-bold mb-4">Powerful Features</h2>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                Our AI assistant combines cutting-edge technology with practical features
+                designed to enhance your productivity and decision-making capabilities.
               </p>
             </div>
-            <div>
-              <h3 className="font-semibold text-lg mb-4">Product</h3>
-              <ul className="space-y-3">
-                <li><a href="#features" className="text-gray-400 hover:text-white">Features</a></li>
-                <li><a href="#use-cases" className="text-gray-400 hover:text-white">Use Cases</a></li>
-                <li><a href="#pricing" className="text-gray-400 hover:text-white">Pricing</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">API Documentation</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">Updates</a></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold text-lg mb-4">Company</h3>
-              <ul className="space-y-3">
-                <li><a href="#" className="text-gray-400 hover:text-white">About</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">Blog</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">Careers</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">Press</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">Partners</a></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold text-lg mb-4">Legal</h3>
-              <ul className="space-y-3">
-                <li><a href="#" className="text-gray-400 hover:text-white">Privacy Policy</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">Terms of Service</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">Security</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">Compliance</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">GDPR</a></li>
-              </ul>
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+              {features.map((feature, index) => (
+                <Card key={index} className="p-6 hover:shadow-lg transition-shadow">
+                  <div className="bg-blue-50 rounded-full p-3 w-fit mb-4">
+                    <feature.icon className="h-8 w-8 text-blue-600" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+                  <p className="text-gray-600">{feature.description}</p>
+                </Card>
+              ))}
             </div>
           </div>
-          <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
-            <p>© {new Date().getFullYear()} Grubby AI. All rights reserved.</p>
+        </section>
+
+        {/* Use Cases */}
+        <section id="use-cases" className="bg-gray-50 py-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-4xl font-bold mb-4">Use Cases</h2>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                Discover how our AI assistant can transform different aspects of your business
+                with intelligent automation and support.
+              </p>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+              {useCases.map((useCase, index) => (
+                <Card key={index} className="p-6 hover:shadow-lg transition-shadow">
+                  <div className="bg-purple-50 rounded-full p-3 w-fit mb-4">
+                    <useCase.icon className="h-8 w-8 text-purple-600" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">{useCase.title}</h3>
+                  <p className="text-gray-600">{useCase.description}</p>
+                </Card>
+              ))}
+            </div>
           </div>
-        </div>
-      </footer>
-    </div>
+        </section>
+
+        {/* How it Works */}
+        <section id="how-it-works" className="py-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-4xl font-bold mb-4">How It Works</h2>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                Get started with our AI assistant in three simple steps and transform
+                your workflow immediately.
+              </p>
+            </div>
+            <div className="grid md:grid-cols-3 gap-8">
+              <div className="text-center">
+                <div className="bg-blue-100 rounded-full p-6 inline-block mb-6">
+                  <Rocket className="h-12 w-12 text-blue-600" />
+                </div>
+                <h3 className="text-2xl font-semibold mb-4">1. Quick Setup</h3>
+                <p className="text-gray-600">
+                  Sign up and integrate with your existing tools in minutes. No complex
+                  configuration required.
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="bg-blue-100 rounded-full p-6 inline-block mb-6">
+                  <Brain className="h-12 w-12 text-blue-600" />
+                </div>
+                <h3 className="text-2xl font-semibold mb-4">2. AI Learning</h3>
+                <p className="text-gray-600">
+                  Our AI adapts to your needs and learns from interactions to provide
+                  increasingly relevant responses.
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="bg-blue-100 rounded-full p-6 inline-block mb-6">
+                  <Zap className="h-12 w-12 text-blue-600" />
+                </div>
+                <h3 className="text-2xl font-semibold mb-4">3. Instant Results</h3>
+                <p className="text-gray-600">
+                  Get immediate, accurate responses and solutions to boost your
+                  productivity.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Testimonials */}
+        <section className="bg-gray-50 py-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-4xl font-bold mb-4">Trusted by Industry Leaders</h2>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                See how organizations are transforming their operations with our AI assistant.
+              </p>
+            </div>
+            <div className="grid md:grid-cols-3 gap-8">
+              {testimonials.map((testimonial, index) => (
+                <Card key={index} className="p-6">
+                  <div className="flex items-center mb-6">
+                    <img
+                      src={testimonial.image}
+                      alt={testimonial.name}
+                      className="h-14 w-14 rounded-full mr-4 object-cover"
+                    />
+                    <div>
+                      <h3 className="font-semibold text-lg">{testimonial.name}</h3>
+                      <p className="text-gray-600">{testimonial.role}</p>
+                    </div>
+                  </div>
+                  <p className="text-gray-600 mb-6 italic">"{testimonial.content}"</p>
+                  <div className="flex text-yellow-400">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className="h-5 w-5 fill-current" />
+                    ))}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Pricing */}
+        <section id="pricing" className="py-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-4xl font-bold mb-4">Simple, Transparent Pricing</h2>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                Choose the perfect plan for your needs. All plans include core features
+                with additional benefits as you scale.
+              </p>
+            </div>
+            <div className="grid md:grid-cols-3 gap-8">
+              {[
+                {
+                  name: 'Basic',
+                  price: '0',
+                  features: [
+                    '100 messages/month',
+                    'Basic AI model access',
+                    'Email support',
+                    'API access',
+                    'Basic analytics'
+                  ]
+                },
+                {
+                  name: 'Pro',
+                  price: '29',
+                  features: [
+                    '1000 messages/month',
+                    'Advanced AI model access',
+                    'Priority support',
+                    'Full API access',
+                    'Advanced analytics',
+                    'Custom integrations',
+                    'Team collaboration'
+                  ]
+                },
+                {
+                  name: 'Enterprise',
+                  price: '99',
+                  features: [
+                    'Unlimited messages',
+                    'Custom AI model training',
+                    '24/7 dedicated support',
+                    'Enterprise API access',
+                    'Advanced security features',
+                    'Custom integrations',
+                    'Team collaboration',
+                    'Dedicated account manager',
+                    'Custom contracts'
+                  ]
+                }
+              ].map((plan, index) => (
+                <Card 
+                  key={index} 
+                  className={`p-8 ${index === 1 ? 'border-blue-500 border-2 relative' : ''}`}
+                >
+                  {index === 1 && (
+                    <div className="absolute top-0 right-0 bg-blue-500 text-white px-4 py-1 rounded-bl-lg rounded-tr-lg text-sm font-medium">
+                      Popular
+                    </div>
+                  )}
+                  <h3 className="text-2xl font-semibold mb-2">{plan.name}</h3>
+                  <div className="mb-6">
+                    <span className="text-5xl font-bold">${plan.price}</span>
+                    <span className="text-gray-600">/month</span>
+                  </div>
+                  <ul className="space-y-4 mb-8">
+                    {plan.features.map((feature, i) => (
+                      <li key={i} className="flex items-center">
+                        <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Button
+                    className="w-full"
+                    variant={index === 1 ? "default" : "outline"}
+                    size="lg"
+                    onClick={() => setShowChat(true)}
+                  >
+                    {index === 0 ? 'Start Free' : 'Get Started'}
+                  </Button>
+                </Card>
+              ))}
+            </div>
+            <p className="text-center mt-8 text-gray-600">
+              Need a custom plan? <Button variant="link" className="text-blue-600">Contact us</Button>
+            </p>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section className="bg-gray-50 py-20">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-4xl font-bold mb-4">Frequently Asked Questions</h2>
+              <p className="text-xl text-gray-600">
+                Find answers to common questions about our AI assistant.
+              </p>
+            </div>
+            <Card className="p-6">
+              <Accordion type="single" collapsible className="space-y-4">
+                {faqs.map((faq, index) => (
+                  <AccordionItem key={index} value={`item-${index}`}>
+                    <AccordionTrigger className="text-lg font-medium">
+                      {faq.question}
+                    </AccordionTrigger>
+                    <AccordionContent className="text-gray-600">
+                      {faq.answer}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </Card>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-12 text-center text-white">
+              <h2 className="text-4xl font-bold mb-4">Ready to Transform Your Workflow?</h2>
+              <p className="text-xl mb-8 max-w-2xl mx-auto">
+                Join thousands of professionals who are already using our AI assistant
+                to enhance their productivity and decision-making.
+              </p>
+              <div className="flex gap-4 justify-center">
+                <Button
+                  size="lg"
+                  variant="secondary"
+                  onClick={() => setShowChat(true)}
+                >
+                  Start Free Trial
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="bg-transparent border-white text-white hover:bg-white hover:text-blue-600"
+                  onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
+                >
+                  View Pricing
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* About Grubby AI Section */}
+        <section className="py-20 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-4xl font-bold mb-4">About Grubby AI</h2>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                Grubby AI represents the next evolution in artificial intelligence assistants. Built on the powerful Optimus Alpha model, Grubby AI combines advanced natural language understanding with practical features designed for real-world applications.
+              </p>
+            </div>
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              <div>
+                <h3 className="text-2xl font-bold mb-4">Why Choose Grubby AI?</h3>
+                <ul className="space-y-4">
+                  <li className="flex items-start">
+                    <Check className="h-6 w-6 text-green-500 mr-2 flex-shrink-0 mt-1" />
+                    <span>Superior understanding of context and nuance compared to other AI assistants</span>
+                  </li>
+                  <li className="flex items-start">
+                    <Check className="h-6 w-6 text-green-500 mr-2 flex-shrink-0 mt-1" />
+                    <span>Enterprise-grade security with end-to-end encryption</span>
+                  </li>
+                  <li className="flex items-start">
+                    <Check className="h-6 w-6 text-green-500 mr-2 flex-shrink-0 mt-1" />
+                    <span>Customizable to your specific industry needs and workflows</span>
+                  </li>
+                  <li className="flex items-start">
+                    <Check className="h-6 w-6 text-green-500 mr-2 flex-shrink-0 mt-1" />
+                    <span>Seamless integration with your existing tools and platforms</span>
+                  </li>
+                </ul>
+              </div>
+              <div className="bg-blue-50 p-8 rounded-lg">
+                <h3 className="text-2xl font-bold mb-4">The Grubby AI Difference</h3>
+                <p className="mb-4">
+                  Unlike other AI solutions that offer generic responses, Grubby AI is designed to understand the specific context of your queries and provide tailored, actionable insights.
+                </p>
+                <p>
+                  Our continuous learning system means Grubby AI gets better with every interaction, adapting to your preferences and needs over time.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Footer */}
+        <footer className="bg-gray-900 text-white py-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid md:grid-cols-4 gap-8">
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <Sparkles className="h-6 w-6 text-blue-400" />
+                  <span className="text-xl font-bold">Grubby AI</span>
+                </div>
+                <p className="text-gray-400">
+                  Next-generation AI assistant for businesses and individuals.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg mb-4">Product</h3>
+                <ul className="space-y-3">
+                  <li><a href="#features" className="text-gray-400 hover:text-white">Features</a></li>
+                  <li><a href="#use-cases" className="text-gray-400 hover:text-white">Use Cases</a></li>
+                  <li><a href="#pricing" className="text-gray-400 hover:text-white">Pricing</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-white">API Documentation</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-white">Updates</a></li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg mb-4">Company</h3>
+                <ul className="space-y-3">
+                  <li><a href="#" className="text-gray-400 hover:text-white">About</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-white">Blog</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-white">Careers</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-white">Press</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-white">Partners</a></li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg mb-4">Legal</h3>
+                <ul className="space-y-3">
+                  <li><a href="#" className="text-gray-400 hover:text-white">Privacy Policy</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-white">Terms of Service</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-white">Security</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-white">Compliance</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-white">GDPR</a></li>
+                </ul>
+              </div>
+            </div>
+            <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
+              <p>© {new Date().getFullYear()} Grubby AI. All rights reserved.</p>
+            </div>
+          </div>
+        </footer>
+      </div>
+    </ErrorBoundary>
   );
 }
