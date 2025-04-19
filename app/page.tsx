@@ -195,11 +195,13 @@ export default function Home() {
       const data = await response.json();
       console.log("Response from API:", data);
       
+      console.log("API response structure:", JSON.stringify(data, null, 2));
+      
       const assistantMessage: Message = {
         role: "assistant",
         content: data.choices && data.choices[0] && data.choices[0].message 
           ? data.choices[0].message.content 
-          : "Sorry, I couldn't generate a response.",
+          : data.message || data.content || "Sorry, I couldn't generate a response.",
         timestamp: Date.now(),
       };
 
@@ -214,6 +216,9 @@ export default function Home() {
       }
     } catch (error) {
       console.error("Error in handleSubmit:", error);
+      if (error instanceof Error) {
+        console.error("Error details:", error.message, error.stack);
+      }
       const errorMessage = error && typeof error === 'object' && 'message' in error 
         ? error.message as string 
         : "Failed to get response from AI";

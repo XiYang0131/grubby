@@ -46,6 +46,17 @@ You represent Grubby AI, which prides itself on creating AI experiences that fee
 
     while (retries <= maxRetries) {
       try {
+        // 确保消息格式正确
+        const formattedMessages = [systemPrompt, ...(messages || []), userMessage].map(({ role, content }) => {
+          // 确保role是有效值
+          const validRole = ["system", "user", "assistant"].includes(role) ? role : "user";
+          return { role: validRole, content: content || "" };
+        });
+        
+        // 添加超时控制
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
+
         // 使用OpenRouter API
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
@@ -56,11 +67,14 @@ You represent Grubby AI, which prides itself on creating AI experiences that fee
           },
           body: JSON.stringify({
             model: "openai/gpt-3.5-turbo",
-            messages: [systemPrompt, ...(messages || []), userMessage].map(({ role, content }) => ({ role, content })),
-            temperature: 0.7, // 添加温度参数控制创造性
-            max_tokens: 1000, // 控制响应长度
+            messages: formattedMessages,
+            temperature: 0.7,
+            max_tokens: 1000,
           }),
+          signal: controller.signal,
         });
+        
+        clearTimeout(timeoutId); // 清除超时
         
         console.log("OpenRouter response status:", response.status);
         
@@ -84,12 +98,39 @@ You represent Grubby AI, which prides itself on creating AI experiences that fee
         
         const data = await response.json();
         console.log("API response received");
+        console.log("API response data:", JSON.stringify(data, null, 2));
+        
+        // 检查响应格式
+        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+          console.warn("Unexpected API response format:", data);
+          // 尝试适应不同的响应格式
+          const formattedResponse = {
+            choices: [
+              {
+                message: {
+                  content: data.response || data.message || data.content || 
+                          (data.choices && data.choices[0] && data.choices[0].message ? 
+                           data.choices[0].message.content : "AI response format error")
+                }
+              }
+            ]
+          };
+          return new Response(JSON.stringify(formattedResponse), {
+            status: 200,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
         
         return new Response(JSON.stringify(data), {
           status: 200,
           headers: { "Content-Type": "application/json" }
         });
       } catch (error) {
+        clearTimeout(timeoutId); // 确保清除超时
+        if (error.name === 'AbortError') {
+          console.error("Request timed out");
+          // 处理超时...
+        }
         console.error("API route error:", error);
         retries++;
         
